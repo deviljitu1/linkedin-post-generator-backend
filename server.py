@@ -166,55 +166,21 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             raise e
     
     def extract_article_content(self, url):
-        """Extract content from article URL"""
+        """Extract content from article URL using newspaper3k"""
         try:
-            # Use a CORS proxy to fetch the article content
-            proxy_url = f"https://api.allorigins.win/get?url={urllib.parse.quote(url)}"
-            response = requests.get(proxy_url)
-            data = response.json()
-            
-            if data.get('contents'):
-                # Parse the HTML content
-                soup = BeautifulSoup(data['contents'], 'html.parser')
-                
-                # Extract text content from common article selectors
-                selectors = [
-                    'article',
-                    '[class*="content"]',
-                    '[class*="article"]',
-                    '[class*="post"]',
-                    '.post-content',
-                    '.article-content',
-                    '.entry-content',
-                    'main',
-                    '.main-content'
-                ]
-                
-                content = ''
-                for selector in selectors:
-                    element = soup.select_one(selector)
-                    if element:
-                        content = element.get_text().strip()
-                        if len(content) > 100:
-                            break
-                
-                # If no specific content found, get body text
-                if not content or len(content) < 100:
-                    content = soup.body.get_text().strip() if soup.body else ''
-                
-                # Clean up the content
-                content = ' '.join(content.split())[:2000]
-                
-                return {
-                    'title': soup.title.string if soup.title else 'Article',
-                    'content': content,
-                    'url': url
-                }
-            
-            raise Exception('Could not extract content from URL')
-            
+            import newspaper
+            article = newspaper.Article(url)
+            article.download()
+            article.parse()
+            content = article.text.strip()
+            title = article.title.strip() if article.title else 'Article'
+            return {
+                'title': title,
+                'content': content[:2000],
+                'url': url
+            }
         except Exception as e:
-            print(f"Error extracting article content: {e}")
+            print(f"Error extracting article content with newspaper3k: {e}")
             raise Exception('Failed to extract article content. Please check the URL and try again.')
     
     def create_topic_prompt(self, topic, industry, tone):
