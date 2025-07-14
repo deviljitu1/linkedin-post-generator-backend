@@ -188,65 +188,26 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             print(f"Error extracting article content with newspaper3k: {e}")
             raise Exception('Failed to extract article content. Please check the URL and try again.')
     
+    def get_tone_instruction(self, tone):
+        tone_map = {
+            'professional': 'Use formal language, focus on expertise, and maintain a business-like tone.',
+            'casual': 'Use friendly, conversational language, and keep the tone relaxed.',
+            'enthusiastic': 'Use energetic, positive language, and express excitement.',
+            'educational': 'Focus on teaching, use clear explanations, and provide actionable insights.'
+        }
+        return tone_map.get(tone.lower(), f"Write in a {tone} tone.")
+
     def create_topic_prompt(self, topic, industry, tone):
-        """Create prompt for topic-based post generation"""
+        """Create prompt for topic-based post generation with explicit tone instructions"""
         default_topic = topic or 'latest project completion'
         default_industry = industry or 'technology and digital marketing'
-        
-        return f"""Create a compelling LinkedIn post about {default_topic} in the {default_industry} industry.
+        tone_instruction = self.get_tone_instruction(tone)
+        return f"""Create a compelling LinkedIn post about {default_topic} in the {default_industry} industry.\n\nRequirements:\n- {tone_instruction}\n- Length: 2-4 sentences\n- Include emojis for engagement\n- Make it professional yet engaging\n- End with a question to encourage interaction\n- Include 3-5 relevant hashtags\n\nExample format:\n🚀 [Engaging opening about the topic]\n\n[2-3 sentences with insights, achievements, or tips]\n\n[Question to engage audience]\n\n#Hashtag1 #Hashtag2 #Hashtag3\n\nGenerate the post:"""
 
-Requirements:
-- Tone: {tone}
-- Length: 2-4 sentences
-- Include emojis for engagement
-- Make it professional yet engaging
-- End with a question to encourage interaction
-- Include 3-5 relevant hashtags
-
-Example format:
-🚀 [Engaging opening about the topic]
-
-[2-3 sentences with insights, achievements, or tips]
-
-[Question to engage audience]
-
-#Hashtag1 #Hashtag2 #Hashtag3
-
-Generate the post:"""
-    
     def create_article_prompt(self, article_data, industry, tone):
-        """Create prompt for article summarization"""
-        return f"""Create a compelling LinkedIn post that summarizes this article:
-
-Article Title: {article_data['title']}
-Article URL: {article_data['url']}
-Article Content: {article_data['content'][:1500]}...
-
-Requirements:
-- Tone: {tone}
-- Industry Context: {industry}
-- Length: 3-5 sentences
-- Include emojis for engagement
-- Summarize key points from the article
-- Add your professional insights
-- End with a question to encourage interaction
-- Include 3-5 relevant hashtags
-- Mention the source article
-
-Format:
-🚀 [Engaging opening about the article topic]
-
-[2-3 sentences summarizing key insights from the article]
-
-[Your professional take or industry perspective]
-
-[Question to engage audience]
-
-[Source: Article Title]
-
-#Hashtag1 #Hashtag2 #Hashtag3
-
-Generate the LinkedIn post:"""
+        """Create prompt for article summarization with explicit tone instructions"""
+        tone_instruction = self.get_tone_instruction(tone)
+        return f"""Create a compelling LinkedIn post that summarizes this article:\n\nArticle Title: {article_data['title']}\nArticle URL: {article_data['url']}\nArticle Content: {article_data['content'][:1500]}...\n\nRequirements:\n- {tone_instruction}\n- Industry Context: {industry}\n- Length: 3-5 sentences\n- Include emojis for engagement\n- Summarize key points from the article\n- Add your professional insights\n- End with a question to encourage interaction\n- Include 3-5 relevant hashtags\n- Mention the source article\n\nFormat:\n🚀 [Engaging opening about the article topic]\n\n[2-3 sentences summarizing key insights from the article]\n\n[Your professional take or industry perspective]\n\n[Question to engage audience]\n\n[Source: Article Title]\n\n#Hashtag1 #Hashtag2 #Hashtag3\n\nGenerate the LinkedIn post:"""
 
 def main():
     """Start the HTTP server"""
