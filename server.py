@@ -152,10 +152,15 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             return self.call_openrouter_api(prompt)
 
     def generate_post_from_article(self, url, industry, tone):
-        """Generate LinkedIn post from article URL using Gemini, fallback to OpenRouter"""
+        """Generate LinkedIn post from article URL using Gemini, fallback to OpenRouter. If extraction fails, try summarizing the URL directly."""
         try:
-            article_data = self.extract_article_content(url)
-            prompt = self.create_article_prompt(article_data, industry, tone)
+            try:
+                article_data = self.extract_article_content(url)
+                prompt = self.create_article_prompt(article_data, industry, tone)
+            except Exception as extraction_error:
+                print(f"Article extraction failed: {extraction_error}. Trying to summarize URL directly.")
+                # Fallback prompt for summarizing the URL directly
+                prompt = f"Summarize the main points of the article at this URL for a LinkedIn post.\nURL: {url}\nIndustry: {industry}\nTone: {tone}\nInclude emojis, hashtags, and end with a question."
             try:
                 return self.call_gemini_api(prompt)
             except Exception as e:
