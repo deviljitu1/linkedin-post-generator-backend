@@ -19,15 +19,14 @@ from bs4 import BeautifulSoup
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get('PORT', 8000))  # Railway sets PORT environment variable
 HOST = os.environ.get('HOST', '0.0.0.0')  # Railway uses 0.0.0.0
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'AIzaSyCR2qkH4DXw4jBXbT94YnAOgwaSD6r-rBI')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')
 
 # Check if API key is set
 if not GEMINI_API_KEY:
-    print("⚠️  Warning: GEMINI_API_KEY environment variable not set!")
-    print("Please set your Gemini API key as an environment variable:")
-    print("set GEMINI_API_KEY=your-api-key-here")
-    print("Or set it in Railway dashboard under Variables section")
-    # Don't exit - let Railway handle it
+    print("❌ Error: GEMINI_API_KEY environment variable not set!")
+    print("Please set your Gemini API key as an environment variable in Render.")
+    exit(1)
 
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -118,25 +117,50 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             print(f"Error calling Gemini API: {e}")
             raise e
     
+    def call_openrouter_api(self, prompt):
+        """Call OpenRouter API with the given prompt as a fallback"""
+        if not OPENROUTER_API_KEY:
+            raise Exception("OpenRouter API key not configured")
+        url = "https://openrouter.ai/api/v1/generate"
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "openai/gpt-3.5-turbo",
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
+        response = requests.post(url, headers=headers, json=payload)
+        if response.status_code != 200:
+            raise Exception(f"OpenRouter API error: {response.status_code} - {response.text}")
+        data = response.json()
+        # Extract the generated text from OpenRouter response
+        if 'choices' in data and len(data['choices']) > 0:
+            return data['choices'][0]['message']['content'].strip()
+        else:
+            raise Exception("No response generated from OpenRouter API")
+
     def generate_post_from_topic(self, topic, industry, tone):
-        """Generate LinkedIn post from topic using Gemini"""
+        """Generate LinkedIn post from topic using Gemini, fallback to OpenRouter"""
+        prompt = self.create_topic_prompt(topic, industry, tone)
         try:
-            prompt = self.create_topic_prompt(topic, industry, tone)
             return self.call_gemini_api(prompt)
         except Exception as e:
-            print(f"Error generating post from topic: {e}")
-            raise e
-    
+            print(f"Gemini API failed, trying OpenRouter: {e}")
+            return self.call_openrouter_api(prompt)
+
     def generate_post_from_article(self, url, industry, tone):
-        """Generate LinkedIn post from article URL using Gemini"""
+        """Generate LinkedIn post from article URL using Gemini, fallback to OpenRouter"""
         try:
-            # Extract article content
             article_data = self.extract_article_content(url)
-            
-            # Create prompt for article summarization
             prompt = self.create_article_prompt(article_data, industry, tone)
-            return self.call_gemini_api(prompt)
-            
+            try:
+                return self.call_gemini_api(prompt)
+            except Exception as e:
+                print(f"Gemini API failed, trying OpenRouter: {e}")
+                return self.call_openrouter_api(prompt)
         except Exception as e:
             print(f"Error generating post from article: {e}")
             raise e
