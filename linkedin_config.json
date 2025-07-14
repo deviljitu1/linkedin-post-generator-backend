@@ -1,0 +1,39 @@
+{
+    "email": "your-email@example.com",
+    "password": "your-password",
+    "together_api_key": "27d3a97f9acc0d1cce896337df956b79acf66d1dee56df4d37b4f7d3ec07b21d",
+    "ai_posts": [
+        {
+            "topic": "web development project completion",
+            "industry": "technology",
+            "tone": "professional",
+            "generate_image": true,
+            "image_prompt": "modern coding workspace with computer and code"
+        },
+        {
+            "topic": "digital marketing success story",
+            "industry": "marketing",
+            "tone": "enthusiastic",
+            "generate_image": true,
+            "image_prompt": "business growth chart with upward trend"
+        },
+        {
+            "topic": "industry insights and tips",
+            "industry": "business",
+            "tone": "educational",
+            "generate_image": false
+        }
+    ],
+    "manual_posts": [
+        {
+            "text": "🚀 Excited to share my latest project! Building amazing web solutions and digital marketing strategies. #WebDevelopment #DigitalMarketing #Innovation",
+            "image": "images/project1.jpg",
+            "schedule": null
+        },
+        {
+            "text": "💡 Pro tip: Consistency is key in digital marketing. Small daily actions compound into massive results over time. What's your daily marketing routine? #DigitalMarketing #Growth #Consistency",
+            "image": null,
+            "schedule": null
+        }
+    ]
+} 
