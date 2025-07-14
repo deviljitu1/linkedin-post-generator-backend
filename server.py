@@ -93,11 +93,12 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 return
 
             model = data.get('model', 'gemini').lower()
+            word_count = int(data.get('word_count', 80))
 
             if data.get('type') == 'article':
-                post = self.generate_post_from_article(data['url'], data['industry'], data['tone'], model)
+                post = self.generate_post_from_article(data['url'], data['industry'], data['tone'], model, word_count)
             else:
-                post = self.generate_post_from_topic(data['topic'], data['industry'], data['tone'], model)
+                post = self.generate_post_from_topic(data['topic'], data['industry'], data['tone'], model, word_count)
 
             post = self.ensure_hashtags_and_emojis(post, data.get('topic'), data.get('industry'))
 
@@ -157,8 +158,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         else:
             raise Exception("No response from OpenRouter API")
 
-    def generate_post_from_topic(self, topic, industry, tone, model='gemini'):
-        prompt = self.create_topic_prompt(topic, industry, tone)
+    def generate_post_from_topic(self, topic, industry, tone, model='gemini', word_count=80):
+        prompt = self.create_topic_prompt(topic, industry, tone, word_count)
         try:
             if model == 'openrouter':
                 return self.call_openrouter_api(prompt)
@@ -169,13 +170,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 return self.call_gemini_api(prompt)
             return self.call_openrouter_api(prompt)
 
-    def generate_post_from_article(self, url, industry, tone, model='gemini'):
+    def generate_post_from_article(self, url, industry, tone, model='gemini', word_count=80):
         try:
             try:
                 article_data = self.extract_article_content(url)
-                prompt = self.create_article_prompt(article_data, industry, tone)
+                prompt = self.create_article_prompt(article_data, industry, tone, word_count)
             except Exception as extraction_error:
-                prompt = f"Summarize the article at this URL for a LinkedIn post: {url}\nIndustry: {industry}\nTone: {tone}\nInclude emojis, a call-to-action, and at least 3 relevant hashtags."
+                prompt = f"Summarize the article at this URL for a LinkedIn post: {url}\nIndustry: {industry}\nTone: {tone}\nLimit the post to about {word_count} words. Include emojis, a call-to-action, and at least 3 relevant hashtags."
             try:
                 if model == 'openrouter':
                     return self.call_openrouter_api(prompt)
@@ -214,12 +215,11 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         }
         return tone_map.get(tone.lower(), f"Use a {tone} tone.")
 
-    def create_topic_prompt(self, topic, industry, tone):
+    def create_topic_prompt(self, topic, industry, tone, word_count=80):
         topic = topic or 'latest industry trend'
         industry = industry or 'technology'
         tone_instruction = self.get_tone_instruction(tone)
-
-        return f"""You are a LinkedIn content strategist. Write a compelling post about "{topic}" in the "{industry}" industry.
+        return f'''You are a LinkedIn content strategist. Write a compelling post about "{topic}" in the "{industry}" industry.
 
 Instructions:
 - {tone_instruction}
@@ -228,10 +228,11 @@ Instructions:
 - Add emojis to boost engagement
 - End with a strong CTA or open question
 - **MANDATORY**: Add 3-5 relevant and trending hashtags at the end
+- Limit the post to about {word_count} words
 
-Now write the post:"""
+Now write the post:'''
 
-    def create_article_prompt(self, article_data, industry, tone):
+    def create_article_prompt(self, article_data, industry, tone, word_count=80):
         tone_instruction = self.get_tone_instruction(tone)
         return f'''Summarize the following article into a scroll-stopping, SEO-friendly LinkedIn post.
 
@@ -249,6 +250,7 @@ Post requirements:
 - Include emojis for tone
 - End with a question or CTA
 - **MANDATORY**: Add 3-5 relevant and trending hashtags at the end
+- Limit the post to about {word_count} words
 
 Now write the LinkedIn post:'''
 
