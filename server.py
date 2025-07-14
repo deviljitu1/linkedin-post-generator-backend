@@ -223,7 +223,7 @@ Now write the post:"""
 
     def create_article_prompt(self, article_data, industry, tone):
         tone_instruction = self.get_tone_instruction(tone)
-        return f"""Summarize the following article into a scroll-stopping, SEO-friendly LinkedIn post.
+        return f'''Summarize the following article into a scroll-stopping, SEO-friendly LinkedIn post.
 
 Title: {article_data['title']}
 Industry: {industry}
@@ -240,7 +240,7 @@ Post requirements:
 - End with a question or CTA
 - **MANDATORY**: Add 3-5 relevant and trending hashtags at the end
 
-Now write the LinkedIn post:"""
+Now write the LinkedIn post:'''
 
 def main():
     os.chdir(DIRECTORY)
