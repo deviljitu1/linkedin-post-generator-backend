@@ -92,10 +92,12 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(500, "Gemini API key not configured")
                 return
 
+            model = data.get('model', 'gemini').lower()
+
             if data.get('type') == 'article':
-                post = self.generate_post_from_article(data['url'], data['industry'], data['tone'])
+                post = self.generate_post_from_article(data['url'], data['industry'], data['tone'], model)
             else:
-                post = self.generate_post_from_topic(data['topic'], data['industry'], data['tone'])
+                post = self.generate_post_from_topic(data['topic'], data['industry'], data['tone'], model)
 
             post = self.ensure_hashtags_and_emojis(post, data.get('topic'), data.get('industry'))
 
@@ -155,15 +157,19 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         else:
             raise Exception("No response from OpenRouter API")
 
-    def generate_post_from_topic(self, topic, industry, tone):
+    def generate_post_from_topic(self, topic, industry, tone, model='gemini'):
         prompt = self.create_topic_prompt(topic, industry, tone)
         try:
+            if model == 'openrouter':
+                return self.call_openrouter_api(prompt)
             return self.call_gemini_api(prompt)
         except Exception as e:
-            print(f"Gemini failed, trying OpenRouter: {e}")
+            print(f"Primary model failed, trying fallback: {e}")
+            if model == 'openrouter':
+                return self.call_gemini_api(prompt)
             return self.call_openrouter_api(prompt)
 
-    def generate_post_from_article(self, url, industry, tone):
+    def generate_post_from_article(self, url, industry, tone, model='gemini'):
         try:
             try:
                 article_data = self.extract_article_content(url)
@@ -171,9 +177,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as extraction_error:
                 prompt = f"Summarize the article at this URL for a LinkedIn post: {url}\nIndustry: {industry}\nTone: {tone}\nInclude emojis, a call-to-action, and at least 3 relevant hashtags."
             try:
+                if model == 'openrouter':
+                    return self.call_openrouter_api(prompt)
                 return self.call_gemini_api(prompt)
             except Exception as e:
-                print(f"Gemini failed, trying OpenRouter: {e}")
+                print(f"Primary model failed, trying fallback: {e}")
+                if model == 'openrouter':
+                    return self.call_gemini_api(prompt)
                 return self.call_openrouter_api(prompt)
         except Exception as e:
             raise e
